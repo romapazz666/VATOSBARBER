@@ -9,6 +9,8 @@
 
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body class="bg-stone-900 text-stone-100 font-sans min-h-screen flex flex-col justify-between select-none">
 
@@ -323,6 +325,7 @@
         }
 
         function sumarCorteMaty() { db.ref('cortesMaty').set(cortesMaty + 1); }
+        function avanzarCorteMaty() { db.ref('cortesMaty').set(cortesMaty + 1); }
         function restarCorteMaty() { if(cortesMaty > 0) db.ref('cortesMaty').set(cortesMaty - 1); }
         
         function finalizarJornadaMaty() {
@@ -475,110 +478,90 @@
         }
 
         function renderizarHistorial(historialData) {
-            const contenedor = document.getElementById('listaHistorial');
-            const contenedorDesglose = document.getElementById('desglosesBarberos');
-            if(!contenedor || !contenedorDesglose) return;
-            
-            contenedor.innerHTML = '';
-            contenedorDesglose.innerHTML = '';
-            
-            const registros = Object.values(historialData);
-            const ahora = new Date();
+    const contenedor = document.getElementById('listaHistorial');
+    const contenedorDesglose = document.getElementById('desglosesBarberos');
+    if(!contenedor || !contenedorDesglose) return;
+    
+    contenedor.innerHTML = '';
+    contenedorDesglose.innerHTML = '';
+    
+    const registros = Object.values(historialData);
+    const ahora = new Date();
 
-            const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).getTime();
-            const diaSemana = ahora.getDay(); 
-            const diferenciaLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
-            const inicioSemana = new Date(ahora.getFullYear(), ., ahora.getDate() + diferenciaLunes).getTime();
-            const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).getTime();
+    const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).getTime();
+    const diaSemana = ahora.getDay(); 
+    const diferenciaLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
+    // CORREGIDO: Se agregó ahora.getMonth() correctamente
+    const inicioSemana = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + diferenciaLunes).getTime();
+    const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).getTime();
 
-            let totalHoyFacturado = 0;
-            let totalSemanal = 0;
-            let totalMensual = 0;
-            let statsBarberos = {};
+    let totalHoyFacturado = 0;
+    let totalSemanal = 0;
+    let totalMensual = 0;
+    let statsBarberos = {};
 
-            registros.forEach(r => {
-                const monto = r.recaudado || 0;
-                const cortes = r.cortes || 0;
-                const rTimestamp = r.timestamp || Date.now();
-                const nombreB = r.barbero || "Desconocido";
+    registros.forEach(r => {
+        const monto = r.recaudado || 0;
+        const cortes = r.cortes || 0;
+        const rTimestamp = r.timestamp || Date.now();
+        const nombreB = r.barbero || "Desconocido";
 
-                if (!statsBarberos[nombreB]) {
-                    statsBarberos[nombreB] = { cortesSemana: 0, plataSemana: 0, cortesMes: 0, plataMes: 0 };
-                }
-
-                if (rTimestamp >= inicioHoy) totalHoyFacturado += monto;
-                if (rTimestamp >= inicioSemana) {
-                    totalSemanal += monto;
-                    statsBarberos[nombreB].cortesSemana += cortes;
-                    statsBarberos[nombreB].plataSemana += monto;
-                }
-                if (rTimestamp >= inicioMes) {
-                    totalMensual += monto;
-                    statsBarberos[nombreB].cortesMes += cortes;
-                    statsBarberos[nombreB].plataMes += monto;
-                }
-            });
-
-            document.getElementById('totalFacturadoHoy').innerText = `$${totalHoyFacturado}`;
-            document.getElementById('ingresoSemanal').innerText = `$${totalSemanal}`;
-            document.getElementById('ingresoMensual').innerText = `$${totalMensual}`;
-
-            const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-            document.getElementById('labelMes').innerText = `Todo ${nombresMeses[ahora.getMonth()]}`;
-            document.getElementById('labelSemana').innerText = "Semana Lunes a Dom";
-
-            const listaNombres = Object.keys(statsBarberos);
-            if(listaNombres.length === 0) {
-                contenedorDesglose.innerHTML = `<p class="text-xs text-stone-500 py-1">Sin cierres acumulados aún.</p>`;
-            } else {
-                listaNombres.forEach(nombre => {
-                    const sb = statsBarberos[nombre];
-                    const fila = document.createElement('div');
-                    fila.className = "bg-stone-950 p-3.5 rounded-xl border border-stone-800 shadow-sm space-y-2";
-                    fila.innerHTML = `
-                        <div class="flex justify-between items-center border-b border-stone-900 pb-1.5">
-                            <h4 class="font-bold text-amber-500 text-sm flex items-center gap-1.5">
-                                <i data-lucide="user" class="w-3.5 h-3.5 text-stone-400"></i> ${nombre}
-                            </h4>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2 text-xs">
-                            <div class="bg-stone-900/50 p-2 rounded-lg">
-                                <p class="text-[10px] text-stone-500 font-bold uppercase tracking-wider">En la Semana</p>
-                                <p class="font-bold text-green-400 mt-0.5">$${sb.plataSemana} <span class="text-stone-400 font-normal text-[10px]">(${sb.cortesSemana} crt)</span></p>
-                            </div>
-                            <div class="bg-stone-900/50 p-2 rounded-lg">
-                                <p class="text-[10px] text-stone-500 font-bold uppercase tracking-wider">En el Mes</p>
-                                <p class="font-bold text-amber-500 mt-0.5">$${sb.plataMes} <span class="text-stone-400 font-normal text-[10px]">(${sb.cortesMes} crt)</span></p>
-                            </div>
-                        </div>
-                    `;
-                    contenedorDesglose.appendChild(fila);
-                });
-            }
-
-            const registrosOrdenados = [...registros].reverse();
-            if (registrosOrdenados.length === 0) {
-                contenedor.innerHTML = `<p class="text-center text-xs text-stone-500 py-4">No hay cierres registrados todavía.</p>`;
-                return;
-            }
-
-            registrosOrdenados.forEach(r => {
-                const card = document.createElement('div');
-                card.className = "bg-stone-950/60 border border-stone-800/80 p-3.5 rounded-xl flex justify-between items-center text-sm";
-                card.innerHTML = `
-                    <div>
-                        <span class="text-[10px] bg-stone-800 text-stone-400 px-2 py-0.5 rounded-full font-mono font-bold">${r.fecha}</span>
-                        <h4 class="font-semibold text-stone-200 mt-1.5"><span class="text-amber-500">${r.barbero}</span> cerró jornada</h4>
-                    </div>
-                    <div class="text-right">
-                        <p class="font-black text-green-400 text-base">$${r.recaudado}</p>
-                        <p class="text-[10px] text-stone-400">${r.cortes} cortes metidos</p>
-                    </div>
-                `;
-                contenedor.appendChild(card);
-            });
-            lucide.createIcons();
+        if (!statsBarberos[nombreB]) {
+            statsBarberos[nombreB] = { cortesSemana: 0, plataSemana: 0, cortesMes: 0, plataMes: 0 };
         }
+
+        if (rTimestamp >= inicioHoy) totalHoyFacturado += monto;
+        if (rTimestamp >= inicioSemana) {
+            totalSemanal += monto;
+            statsBarberos[nombreB].cortesSemana += cortes;
+            statsBarberos[nombreB].plataSemana += monto;
+        }
+        if (rTimestamp >= inicioMes) {
+            totalMensual += monto;
+            statsBarberos[nombreB].cortesMes += cortes;
+            statsBarberos[nombreB].plataMes += monto;
+        }
+    });
+
+    document.getElementById('totalFacturadoHoy').innerText = `$${totalHoyFacturado}`;
+    document.getElementById('ingresoSemanal').innerText = `$${totalSemanal}`;
+    document.getElementById('ingresoMensual').innerText = `$${totalMensual}`;
+
+    const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    document.getElementById('labelMes').innerText = `Todo ${nombresMeses[ahora.getMonth()]}`;
+    document.getElementById('labelSemana').innerText = "Semana Lunes a Dom";
+
+    const listaNombres = Object.keys(statsBarberos);
+    if(listaNombres.length === 0) {
+        contenedorDesglose.innerHTML = `<p class="text-xs text-stone-500 py-1">Sin cierres acumulados aún.</p>`;
+    } else {
+        listaNombres.forEach(nombre => {
+            const sb = statsBarberos[nombre];
+            const fila = document.createElement('div');
+            fila.className = "bg-stone-950 p-3.5 rounded-xl border border-stone-800 shadow-sm space-y-2";
+            // CORREGIDO: HTML cerrado de forma correcta y con las dos columnas
+            fila.innerHTML = `
+                <div class="flex justify-between items-center border-b border-stone-900 pb-1.5">
+                    <h4 class="font-bold text-amber-500 text-sm flex items-center gap-1.5">
+                        <i data-lucide="user" class="w-3.5 h-3.5 text-stone-400"></i> ${nombre}
+                    </h4>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="bg-stone-900/50 p-2 rounded-lg">
+                        <p class="text-[10px] text-stone-500 font-bold uppercase tracking-wider">En la Semana</p>
+                        <p class="font-bold text-green-400 mt-0.5">$${sb.plataSemana} <span class="text-stone-400 font-normal text-[10px]">(${sb.cortesSemana} crt)</span></p>
+                    </div>
+                    <div class="bg-stone-900/50 p-2 rounded-lg">
+                        <p class="text-[10px] text-stone-500 font-bold uppercase tracking-wider">En el Mes</p>
+                        <p class="font-bold text-amber-500 mt-0.5">$${sb.plataMes} <span class="text-stone-400 font-normal text-[10px]">(${sb.cortesMes} crt)</span></p>
+                    </div>
+                </div>
+            `;
+            contenedorDesglose.appendChild(fila);
+        });
+    }
+    lucide.createIcons();
+}
 
         document.getElementById('formNuevoAlumno').addEventListener('submit', (e) => {
             e.preventDefault();
@@ -638,7 +621,7 @@
                         </div>
                         <div class="flex gap-1.5">
                             <button onclick="descargarDiplomaPDF('${al.nombre}', '${al.curso}', '${al.fechaEgreso || al.fechaIngreso}')" class="bg-amber-500 hover:bg-amber-400 text-stone-950 px-3 py-2 rounded-lg text-xs font-black transition flex items-center gap-1 shadow-md min-h-[40px]">
-                                <i data-lucide="image" class="w-3.5 h-3.5"></i> Ver Diploma
+                                <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Ver PDF
                             </button>
                             <button onclick="eliminarAlumno('${id}')" class="p-2.5 bg-stone-900 hover:bg-red-950 text-stone-600 hover:text-red-400 border border-stone-800 rounded-lg transition min-h-[40px]">
                                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -667,66 +650,87 @@
             if (confirm("¿Borrar permanentemente este registro del alumno?")) db.ref(`alumnos/${id}`).remove();
         }
 
-        // ==================== GENERADOR DE DIPLOMA EN IMAGEN ALTA RESOLUCIÓN ====================
+// ==================== GENERADOR DE DIPLOMA EN FORMATO IMAGEN (100% COMPATIBLE CON CELULARES) ====================
         function descargarDiplomaPDF(nombreAlumno, nombreCurso, fechaEgreso) {
+            // Creamos un lienzo de dibujo (Canvas) en alta definición para que no salga pixelado
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             
+            // Medidas en píxeles para una calidad excelente (Proporción A4 Horizontal)
             canvas.width = 1920;
             canvas.height = 1357;
 
+            // 1. Fondo Gris Oscuro Premium Barbería
             ctx.fillStyle = '#181614';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+            // 2. Marco doble dorado decorativo perimetral
             ctx.strokeStyle = '#D97706'; 
             ctx.lineWidth = 10;
             ctx.strokeRect(60, 60, canvas.width - 120, canvas.height - 120);
             ctx.lineWidth = 3;
             ctx.strokeRect(75, 75, canvas.width - 150, canvas.height - 150);
 
+            // Detalle de esquinas decorativas
             ctx.lineWidth = 5;
+            // Esquina superior izquierda
             ctx.beginPath(); ctx.moveTo(90, 120); ctx.lineTo(150, 120); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(120, 90); ctx.lineTo(120, 150); ctx.stroke();
+            // Esquina superior derecha
             ctx.beginPath(); ctx.moveTo(canvas.width - 150, 120); ctx.lineTo(canvas.width - 90, 120); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(canvas.width - 120, 90); ctx.lineTo(canvas.width - 120, 150); ctx.stroke();
 
+            // 3. TEXTOS DEL DIPLOMA (Centrados)
             ctx.textAlign = 'center';
 
+            // Título de la Academia
             ctx.fillStyle = '#F59E0B';
             ctx.font = 'bold 70px Helvetica';
             ctx.fillText("VATOS BARBER STUDIO", canvas.width / 2, 280);
 
+            // Subtítulo
             ctx.fillStyle = '#A8A29E';
             ctx.font = 'bold 24px Helvetica';
             ctx.fillText("CERTIFICADO DE EXCELENCIA PROFESIONAL", canvas.width / 2, 350);
 
+            // Texto de introducción
             ctx.fillStyle = '#D6D3D1';
             ctx.font = '32px Helvetica';
             ctx.fillText("Por cuanto se reconoce que completó con éxito las exigencias de la academia:", canvas.width / 2, 550);
 
+            // NOMBRE DEL ALUMNO (Grande y resaltado)
             ctx.fillStyle = '#FFFFFF';
             ctx.font = 'bold 65px Helvetica';
             ctx.fillText(nombreAlumno.toUpperCase(), canvas.width / 2, 680);
 
+            // Línea divisoria abajo del nombre
             ctx.strokeStyle = '#78716C';
             ctx.lineWidth = 3;
-            ctx.beginPath(); ctx.moveTo(canvas.width / 2 - 350, 720); ctx.lineTo(canvas.width / 2 + 350, 720); ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2 - 350, 720);
+            ctx.lineTo(canvas.width / 2 + 350, 720);
+            ctx.stroke();
 
+            // Texto intermedio
             ctx.fillStyle = '#D6D3D1';
             ctx.font = '32px Helvetica';
             ctx.fillText("Otorgándole el título de idoneidad técnico-profesional en:", canvas.width / 2, 820);
 
+            // NOMBRE DEL CURSO
             ctx.fillStyle = '#F59E0B';
             ctx.font = 'bold 45px Helvetica';
             ctx.fillText(nombreCurso, canvas.width / 2, 910);
 
+            // Fecha y ubicación
             ctx.fillStyle = '#78716C';
             ctx.font = '26px Helvetica';
             ctx.fillText(`Dado en Florencio Varela, Buenos Aires, el ${fechaEgreso}.`, canvas.width / 2, 1040);
 
+            // 4. FIRMAS Y SELLOS (Líneas y textos)
             ctx.strokeStyle = '#F59E0B';
             ctx.lineWidth = 3;
 
+            // Firma Maty
             ctx.beginPath(); ctx.moveTo(250, 1180); ctx.lineTo(650, 1180); ctx.stroke();
             ctx.fillStyle = '#D6D3D1';
             ctx.font = '26px Helvetica';
@@ -735,6 +739,7 @@
             ctx.font = '20px Helvetica';
             ctx.fillText("Director Ejecutivo & Master Barber", 450, 1255);
 
+            // Sello Academia
             ctx.beginPath(); ctx.moveTo(canvas.width - 650, 1180); ctx.lineTo(canvas.width - 250, 1180); ctx.stroke();
             ctx.fillStyle = '#D6D3D1';
             ctx.font = '26px Helvetica';
@@ -743,8 +748,12 @@
             ctx.font = '20px Helvetica';
             ctx.fillText("Vatos Barber Control System", canvas.width - 450, 1255);
 
+            // 5. MOSTRAR COMO IMAGEN EN PESTAÑA NUEVA (Súper amigable con celulares)
             try {
+                // Convertimos todo el diseño en una imagen real (Base64)
                 const urlImagen = canvas.toDataURL('image/png');
+
+                // Abrimos una pestaña limpia e inyectamos la imagen para que el celu la maneje de forma nativa
                 const ventanaImagen = window.open();
                 if (ventanaImagen) {
                     ventanaImagen.document.write(`
@@ -766,13 +775,13 @@
                     `);
                     ventanaImagen.document.close();
                 } else {
+                    // Si el navegador del celular bloquea el "pop-up", redirigimos la misma pestaña para que no falle jamás
                     window.location.href = urlImagen;
                 }
             } catch (error) {
-                alert("Error al generar la imagen del diploma.");
+                alert("Error al generar la imagen del diploma en este dispositivo.");
             }
         }
-
         document.getElementById('formNuevoBarbero').addEventListener('submit', (e) => {
             e.preventDefault();
             const userCheck = document.getElementById('nuevoUsuario').value.trim().toLowerCase();
