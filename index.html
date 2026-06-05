@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Barber Control Pro & Academia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="bg-stone-900 text-stone-100 font-sans min-h-screen flex flex-col justify-between select-none">
+
+    <div id="vistaLogin" class="flex-1 flex flex-col items-center justify-center px-6 py-12">
+        <div class="w-full max-w-sm bg-stone-950 p-8 rounded-2xl border border-stone-800 shadow-xl">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-black tracking-wider text-amber-500">BARBER SYSTEM</h1>
+                <p class="text-sm text-stone-400 mt-2">Iniciá sesión para controlar tu jornada</p>
+            </div>
+
+            <form id="formLogin" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider mb-2">Usuario</label>
+                    <input type="text" id="inputUsuario" required class="w-full bg-stone-900 border border-stone-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition" placeholder="Ej: franco.barber">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider mb-2">Contraseña</label>
+                    <input type="password" id="inputPassword" required class="w-full bg-stone-900 border border-stone-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition" placeholder="••••••••">
+                </div>
+                <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold py-3.5 rounded-xl transition active:scale-95">
+                    Ingresar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="vistaBarbero" class="hidden flex-1 flex flex-col justify-between min-h-screen">
+        <header class="p-4 border-b border-stone-800 flex justify-between items-center bg-stone-950">
+            <div>
+                <p class="text-xs text-stone-400">Barbero Activo</p>
+                <h2 class="text-lg font-bold text-amber-500" id="nombreBarbero">...</h2>
+            </div>
+            <button onclick="cerrarSesion()" class="text-stone-400 hover:text-red-400 text-sm flex items-center gap-1 min-h-[44px]">
+                <i data-lucide="log-out" class="w-4 h-4"></i> Salir
+            </button>
+        </header>
+
+        <main class="flex-1 flex flex-col items-center justify-center px-6 py-8">
+            <h3 class="text-xl font-medium mb-2 text-stone-300">Cortes Realizados</h3>
+            <div class="text-8xl font-black text-white my-4 tracking-wider select-none" id="contadorCortes">0</div>
+            
+            <p class="text-sm text-stone-400 bg-stone-950/50 border border-stone-800 px-4 py-1.5 rounded-full mt-2">
+                Generado hoy: <span class="text-green-400 font-bold" id="plataBarberoHoy">$0</span>
+            </p>
+
+            <div class="flex gap-6 mt-8 w-full max-w-sm">
+                <button id="btnRestar" class="flex-1 bg-stone-800 hover:bg-stone-700 text-stone-300 py-5 rounded-2xl flex items-center justify-center border border-stone-700 transition min-h-[48px] active:scale-95">
+                    <i data-lucide="minus" class="w-8 h-8"></i>
+                </button>
+                <button id="btnSumar" class="flex-[2] bg-amber-500 hover:bg-amber-400 text-stone-950 py-5 rounded-2xl flex items-center justify-center font-bold text-xl transition min-h-[48px] active:scale-95">
+                    <i data-lucide="plus" class="w-8 h-8 mr-2"></i> Sumar Corte
+                </button>
+            </div>
+        </main>
+
+        <footer class="p-4 bg-stone-950 border-t border-stone-800">
+            <button id="btnFinalizar" class="w-full bg-stone-800 hover:bg-green-700 text-stone-300 hover:text-white py-3.5 rounded-xl font-semibold text-sm tracking-wide transition border border-stone-700 min-h-[48px]">
+                Finalizar Jornada
+            </button>
+        </footer>
+    </div>
+
+    <div id="vistaAdmin" class="hidden flex-1 flex flex-col min-h-screen bg-stone-900">
+        <header class="p-4 border-b border-stone-800 flex justify-between items-center bg-stone-950">
+            <div>
+                <p class="text-xs text-stone-400">Panel de Control</p>
+                <h2 class="text-lg font-bold text-amber-500">Administrador (Maty)</h2>
+            </div>
+            <button onclick="cerrarSesion()" class="text-stone-400 hover:text-red-400 text-sm flex items-center gap-1 min-h-[44px]">
+                <i data-lucide="log-out" class="w-4 h-4"></i> Salir
+            </button>
+        </header>
+
+        <div class="bg-stone-950 border-b border-stone-800 grid grid-cols-4 text-[10px] font-bold uppercase tracking-wider text-stone-400 text-center select-none sticky top-0 z-50">
+            <button onclick="cambiarSubVista('diario')" id="tabDiario" class="py-4 border-b-2 border-amber-500 text-amber-500 w-full min-h-[44px]">En Vivo</button>
+            <button onclick="cambiarSubVista('historial')" id="tabHistorial" class="py-4 border-b-2 border-transparent w-full min-h-[44px]">Finanzas</button>
+            <button onclick="cambiarSubVista('academia')" id="tabAcademia" class="py-4 border-b-2 border-transparent w-full min-h-[44px]">Academia</button>
+            <button onclick="cambiarSubVista('config')" id="tabConfig" class="py-4 border-b-2 border-transparent w-full min-h-[44px]">Personal</button>
+        </div>
+
+        <main class="p-4 space-y-6 max-w-md mx-auto w-full flex-1 mb-16">
+            
+            <div id="subVistaDiario" class="space-y-4">
+                <div class="bg-gradient-to-br from-amber-500 to-amber-600 p-5 rounded-2xl text-stone-950 shadow-xl flex justify-between items-center">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wider opacity-80">Caja Estimada Activa (Hoy)</p>
+                        <h3 class="text-3xl font-black" id="totalCajaHoy">$0</h3>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xl font-black bg-stone-950/10 px-2.5 py-1 rounded-lg" id="totalCortesHoy">0</span>
+                        <p class="text-[10px] font-bold uppercase tracking-wider opacity-80 mt-1">Cortes Totales</p>
+                    </div>
+                </div>
+
+                <div class="bg-stone-950 border-2 border-amber-500/30 p-4 rounded-xl space-y-3 shadow-md">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <span class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Tu Contador (Maty)</span>
+                            <h4 class="font-bold text-white text-base mt-1">Mis Cortes de Hoy</h4>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-2xl font-black text-amber-500" id="contadorMaty">0</span>
+                            <p class="text-[10px] text-green-400 font-bold" id="plataMatyHoy">$0</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="restarCorteMaty()" class="flex-1 bg-stone-900 hover:bg-stone-800 text-stone-300 py-3 rounded-xl flex items-center justify-center border border-stone-800 active:scale-95 transition text-sm font-bold min-h-[44px]">
+                            <i data-lucide="minus" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="sumarCorteMaty()" class="flex-[2] bg-amber-500 hover:bg-amber-400 text-stone-950 py-3 rounded-xl flex items-center justify-center active:scale-95 transition text-sm font-black min-h-[44px]">
+                            <i data-lucide="plus" class="w-4 h-4 mr-1"></i> Sumar Mi Corte
+                        </button>
+                    </div>
+                    <button onclick="finalizarJornadaMaty()" class="w-full bg-stone-900 border border-stone-800 hover:border-green-600 hover:bg-green-950/30 text-stone-400 hover:text-green-400 py-2.5 rounded-lg text-xs font-semibold transition min-h-[40px]">
+                        Cerrar Mi Jornada Personal
+                    </button>
+                </div>
+
+                <div class="flex justify-between items-center px-1 pt-2">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-stone-400 flex items-center gap-2">
+                        <i data-lucide="users" class="w-4 h-4"></i> Cortes del Personal en la Barbería
+                    </h3>
+                </div>
+                <div id="listaBarberos" class="space-y-3"></div>
+            </div>
+
+            <div id="subVistaHistorial" class="space-y-4 hidden">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-stone-950 border border-stone-800 p-4 rounded-xl shadow-md">
+                        <p class="text-[10px] text-stone-400 font-bold uppercase tracking-wider" id="labelSemana">Semana Actual</p>
+                        <h4 class="text-xl font-black text-green-400 mt-1" id="ingresoSemanal">$0</h4>
+                    </div>
+                    <div class="bg-stone-950 border border-stone-800 p-4 rounded-xl shadow-md">
+                        <p class="text-[10px] text-stone-400 font-bold uppercase tracking-wider" id="labelMes">Mes Actual</p>
+                        <h4 class="text-xl font-black text-amber-500 mt-1" id="ingresoMensual">$0</h4>
+                    </div>
+                </div>
+
+                <div class="bg-stone-950 border border-green-500/20 p-4 rounded-xl flex justify-between items-center shadow-md bg-gradient-to-r from-stone-950 to-stone-900">
+                    <div>
+                        <p class="text-[10px] text-green-400 font-bold uppercase tracking-wider">Total Facturado Hoy (Cerrado)</p>
+                        <h3 class="text-2xl font-black text-white mt-0.5" id="totalFacturadoHoy">$0</h3>
+                    </div>
+                    <i data-lucide="trending-up" class="w-6 h-6 text-green-400 opacity-60"></i>
+                </div>
+
+                <div class="space-y-2 pt-2">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-stone-400 flex items-center gap-2">
+                        <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Acumulado por Barbero (Cierres)
+                    </h3>
+                    <div id="desglosesBarberos" class="space-y-2"></div>
+                </div>
+
+                <h3 class="text-xs font-bold uppercase tracking-wider text-stone-400 flex items-center gap-2 pt-4">
+                    <i data-lucide="calendar" class="w-4 h-4"></i> Registro de Actividad Histórica
+                </h3>
+                <div id="listaHistorial" class="space-y-3"></div>
+            </div>
+
+            <div id="subVistaAcademia" class="space-y-5 hidden">
+                <section class="bg-stone-950 p-5 rounded-2xl border border-stone-800 shadow-lg">
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-amber-500 mb-4 flex items-center gap-2">
+                        <i data-lucide="graduation-cap" class="w-5 h-5"></i> Registrar Nuevo Alumno
+                    </h3>
+                    <form id="formNuevoAlumno" class="space-y-3">
+                        <input type="text" id="alumnoNombre" required class="w-full bg-stone-900 border border-stone-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 min-h-[44px]" placeholder="Nombre y Apellido del Alumno">
+                        <select id="alumnoCurso" class="w-full bg-stone-900 border border-stone-700 rounded-xl px-4 py-2.5 text-sm text-stone-300 focus:outline-none focus:border-amber-500 min-h-[44px]">
+                            <option value="Barbería Inicial y Estilo Prof.">Curso de Barbería Inicial</option>
+                            <option value="Perfeccionamiento y Técnicas de Fade">Curso de Perfeccionamiento y Fade</option>
+                            <option value="Colorimetría y Diseños Urbanos">Curso de Colorimetría Avanzada</option>
+                        </select>
+                        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-black py-2.5 rounded-xl text-sm transition min-h-[44px] active:scale-95">
+                            Matricular Alumno
+                        </button>
+                    </form>
+                </section>
+
+                <div class="space-y-3">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-stone-400 flex items-center gap-2">
+                        <i data-lucide="user-check" class="w-4 h-4"></i> Alumnos en Curso
+                    </h3>
+                    <div id="listaAlumnosCursando" class="space-y-2"></div>
+                </div>
+
+                <div class="space-y-3 pt-2">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-stone-400 flex items-center gap-2">
+                        <i data-lucide="award" class="w-4 h-4"></i> Alumnos Egresados (Diplomas)
+                    </h3>
+                    <div id="listaAlumnosEgresados" class="space-y-2"></div>
+                </div>
+            </div>
+
+            <div id="subVistaConfig" class="space-y-6 hidden">
+                <section class="bg-stone-950 p-5 rounded-2xl border border-stone-800 shadow-lg">
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-amber-500 mb-3 flex items-center gap-2">
+                        <i data-lucide="dollar-sign" class="w-4 h-4"></i> Valor del Corte
+                    </h3>
+                    <div class="flex gap-3">
+                        <input type="number" id="inputPrecioCorte" class="w-full bg-stone-900 border border-stone-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-amber-500 min-h-[44px]" placeholder="Ej: 4000">
+                        <button onclick="guardarPrecioCorte()" class="bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold px-4 rounded-xl text-sm transition whitespace-nowrap min-h-[44px] active:scale-95">
+                            Actualizar
+                        </button>
+                    </div>
+                </section>
+
+                <section class="bg-stone-950 p-5 rounded-2xl border border-stone-800 shadow-lg">
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-amber-500 mb-4 flex items-center gap-2">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i> Registrar Nuevo Barbero
+                    </h3>
+                    <form id="formNuevoBarbero" class="space-y-3">
+                        <input type="text" id="nuevoNombre" required class="w-full bg-stone-900 border border-stone-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 min-h-[44px]" placeholder="Nombre (Ej: Franco)">
+                        <input type="text" id="nuevoUsuario" required class="w-full bg-stone-900 border border-stone-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 min-h-[44px]" placeholder="Usuario de ingreso">
+                        <input type="password" id="nuevoPassword" required class="w-full bg-stone-900 border border-stone-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 min-h-[44px]" placeholder="Contraseña">
+                        <button type="submit" class="w-full bg-stone-800 hover:bg-amber-500 hover:text-stone-950 text-amber-500 font-semibold py-2.5 rounded-xl text-sm transition min-h-[44px] active:scale-95">
+                            Crear Cuenta
+                        </button>
+                    </form>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDqz1qP6a5i7Jb6eueWU1pC04O02220zb8",
+            authDomain: "vatosbarbercontrol.firebaseapp.com",
+            projectId: "vatosbarbercontrol",
+            storageBucket: "vatosbarbercontrol.firesbasestorage.app",
+            messagingSenderId: "890253079551",
+            appId: "1:890253079551:web:4493b04af7e90217596dca"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const vistaLogin = document.getElementById('vistaLogin');
+        const vistaBarbero = document.getElementById('vistaBarbero');
+        const vistaAdmin = document.getElementById('vistaAdmin');
+        const formLogin = document.getElementById('formLogin');
+        
+        let usuarioLogueadoId = null;
+        let cortesActuales = 0;
+        let precioCorte = 0;
+        let todosLosUsuarios = {};
+        let cortesMaty = 0;
+        let historialGlobal = {};
+        let alumnosGlobal = {};
+        let ultimoDiaGuardado = new Date().toLocaleDateString('es-AR');
+
+        function verificarCambioDeDia() {
+            const hoy = new Date().toLocaleDateString('es-AR');
+            if (hoy !== ultimoDiaGuardado) {
+                ultimoDiaGuardado = hoy;
+                cortesMaty = 0;
+                db.ref('cortesMaty').set(0);
+                for (let id in todosLosUsuarios) {
+                    db.ref(`barberos/${id}/cortesHoy`).set(0);
+                }
+            }
+        }
+        setInterval(verificarCambioDeDia, 10000);
+
+        db.ref('precioCorte').on('value', (snap) => {
+            precioCorte = snap.val() || 0;
+            document.getElementById('inputPrecioCorte').value = precioCorte;
+            actualizarPlataBarbero();
+            actualizarMatyUI();
+            if(!vistaAdmin.classList.contains('hidden')) renderizarBarberos();
+        });
+
+        db.ref('cortesMaty').on('value', (snap) => {
+            verificarCambioDeDia();
+            cortesMaty = snap.val() || 0;
+            actualizarMatyUI();
+            if(!vistaAdmin.classList.contains('hidden')) renderizarBarberos();
+        });
+
+        db.ref('barberos').on('value', (snapshot) => {
+            verificarCambioDeDia();
+            todosLosUsuarios = snapshot.val() || {};
+            if (!vistaAdmin.classList.contains('hidden')) renderizarBarberos();
+            
+            if (usuarioLogueadoId && todosLosUsuarios[usuarioLogueadoId]) {
+                cortesActuales = todosLosUsuarios[usuarioLogueadoId].cortesHoy || 0;
+                document.getElementById('contadorCortes').innerText = cortesActuales;
+                actualizarPlataBarbero();
+            }
+        });
+
+        db.ref('historial').on('value', (snap) => {
+            historialGlobal = snap.val() || {};
+            renderizarHistorial(historialGlobal);
+        });
+
+        db.ref('alumnos').on('value', (snap) => {
+            alumnosGlobal = snap.val() || {};
+            renderizarAlumnos(alumnosGlobal);
+        });
+
+        function actualizarPlataBarbero() {
+            const el = document.getElementById('plataBarberoHoy');
+            if(el) el.innerText = `$${cortesActuales * precioCorte}`;
+        }
+
+        function actualizarMatyUI() {
+            const cont = document.getElementById('contadorMaty');
+            const plat = document.getElementById('plataMatyHoy');
+            if(cont) cont.innerText = cortesMaty;
+            if(plat) plat.innerText = `$${cortesMaty * precioCorte}`;
+        }
+
+        function sumarCorteMaty() { db.ref('cortesMaty').set(cortesMaty + 1); }
+        function avanzarCorteMaty() { db.ref('cortesMaty').set(cortesMaty + 1); }
+        function restarCorteMaty() { if(cortesMaty > 0) db.ref('cortesMaty').set(cortesMaty - 1); }
+        
+        function finalizarJornadaMaty() {
+            if(cortesMaty === 0) return alert("No tenés cortes cargados hoy.");
+            if (confirm(`¿Cerrar tu jornada con ${cortesMaty} cortes ($${cortesMaty * precioCorte})?`)) {
+                const fecha = new Date().toLocaleDateString('es-AR');
+                db.ref('historial').push({
+                    barbero: "Maty (Admin)",
+                    cortes: cortesMaty,
+                    recaudado: cortesMaty * precioCorte,
+                    fecha: fecha,
+                    timestamp: Date.now()
+                });
+                db.ref('cortesMaty').set(0);
+                alert("Tu jornada fue enviada al historial.");
+            }
+        }
+
+        formLogin.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const userIn = document.getElementById('inputUsuario').value.trim().toLowerCase();
+            const passIn = document.getElementById('inputPassword').value;
+
+            if (userIn === 'admin' && passIn === '1234') {
+                vistaLogin.classList.add('hidden');
+                vistaAdmin.classList.remove('hidden');
+                cambiarSubVista('diario');
+                return;
+            }
+
+            let encontradoId = null;
+            for (let id in todosLosUsuarios) {
+                if (todosLosUsuarios[id].usuario.toLowerCase() === userIn && todosLosUsuarios[id].password === passIn) {
+                    encontradoId = id;
+                    break;
+                }
+            }
+
+            if (encontradoId) {
+                usuarioLogueadoId = encontradoId;
+                document.getElementById('nombreBarbero').innerText = todosLosUsuarios[encontradoId].nombre;
+                cortesActuales = todosLosUsuarios[encontradoId].cortesHoy || 0;
+                document.getElementById('contadorCortes').innerText = cortesActuales;
+                actualizarPlataBarbero();
+                vistaLogin.classList.add('hidden');
+                vistaBarbero.classList.remove('hidden');
+            } else {
+                alert("Datos incorrectos.");
+            }
+        });
+
+        document.getElementById('btnSumar').addEventListener('click', () => {
+            if (usuarioLogueadoId) db.ref(`barberos/${usuarioLogueadoId}/cortesHoy`).set(cortesActuales + 1);
+        });
+        document.getElementById('btnRestar').addEventListener('click', () => {
+            if (usuarioLogueadoId && cortesActuales > 0) db.ref(`barberos/${usuarioLogueadoId}/cortesHoy`).set(cortesActuales - 1);
+        });
+
+        document.getElementById('btnFinalizar').addEventListener('click', () => {
+            if (confirm(`¿Terminar jornada con ${cortesActuales} cortes ($${cortesActuales * precioCorte})?`)) {
+                if (cortesActuales > 0) {
+                    const fecha = new Date().toLocaleDateString('es-AR');
+                    db.ref('historial').push({
+                        barbero: todosLosUsuarios[usuarioLogueadoId].nombre,
+                        cortes: cortesActuales,
+                        recaudado: cortesActuales * precioCorte,
+                        fecha: fecha,
+                        timestamp: Date.now()
+                    });
+                }
+                db.ref(`barberos/${usuarioLogueadoId}/cortesHoy`).set(0);
+                cerrarSesion();
+            }
+        });
+
+        function guardarPrecioCorte() {
+            const nuevoVal = parseInt(document.getElementById('inputPrecioCorte').value);
+            if (!isNaN(nuevoVal) && nuevoVal >= 0) {
+                db.ref('precioCorte').set(nuevoVal, () => alert("Precio actualizado."));
+            }
+        }
+
+        function cambiarSubVista(vista) {
+            document.getElementById('subVistaDiario').classList.add('hidden');
+            document.getElementById('subVistaHistorial').classList.add('hidden');
+            document.getElementById('subVistaAcademia').classList.add('hidden');
+            document.getElementById('subVistaConfig').classList.add('hidden');
+            
+            document.getElementById('tabDiario').className = "py-4 border-b-2 border-transparent w-full min-h-[44px]";
+            document.getElementById('tabHistorial').className = "py-4 border-b-2 border-transparent w-full min-h-[44px]";
+            document.getElementById('tabAcademia').className = "py-4 border-b-2 border-transparent w-full min-h-[44px]";
+            document.getElementById('tabConfig').className = "py-4 border-b-2 border-transparent w-full min-h-[44px]";
+
+            if (vista === 'diario') {
+                document.getElementById('subVistaDiario').classList.remove('hidden');
+                document.getElementById('tabDiario').className = "py-4 border-b-2 border-amber-500 text-amber-500 w-full min-h-[44px]";
+                renderizarBarberos();
+            } else if (vista === 'historial') {
+                document.getElementById('subVistaHistorial').classList.remove('hidden');
+                document.getElementById('tabHistorial').className = "py-4 border-b-2 border-amber-500 text-amber-500 w-full min-h-[44px]";
+                renderizarHistorial(historialGlobal);
+            } else if (vista === 'academia') {
+                document.getElementById('subVistaAcademia').classList.remove('hidden');
+                document.getElementById('tabAcademia').className = "py-4 border-b-2 border-amber-500 text-amber-500 w-full min-h-[44px]";
+                renderizarAlumnos(alumnosGlobal);
+            } else if (vista === 'config') {
+                document.getElementById('subVistaConfig').classList.remove('hidden');
+                document.getElementById('tabConfig').className = "py-4 border-b-2 border-amber-500 text-amber-500 w-full min-h-[44px]";
+            }
+        }
+
+        function renderizarBarberos() {
+            const contenedor = document.getElementById('listaBarberos');
+            contenedor.innerHTML = '';
+            
+            let totalCortes = cortesMaty;
+            let totalPlata = cortesMaty * precioCorte;
+
+            for (let id in todosLosUsuarios) {
+                const b = todosLosUsuarios[id];
+                const cortes = b.cortesHoy || 0;
+                const totalBarbero = cortes * precioCorte;
+
+                totalCortes += cortes;
+                totalPlata += totalBarbero;
+
+                const card = document.createElement('div');
+                card.className = "bg-stone-950 border border-stone-800 p-4 rounded-xl flex justify-between items-center shadow-md";
+                card.innerHTML = `
+                    <div>
+                        <h4 class="font-bold text-white">${b.nombre}</h4>
+                        <p class="text-xs text-green-400 font-semibold">Generando: $${totalBarbero}</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="text-right">
+                            <span class="text-2xl font-black text-amber-500">${cortes}</span>
+                            <p class="text-[10px] text-stone-500 uppercase tracking-wider">Cortes</p>
+                        </div>
+                        <button onclick="eliminarBarberoFirebase('${id}', '${b.nombre}')" class="p-3 bg-stone-900 hover:bg-red-950 text-stone-600 hover:text-red-400 border border-stone-800 rounded-lg transition min-h-[44px]">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                `;
+                contenedor.appendChild(card);
+            }
+            
+            document.getElementById('totalCajaHoy').innerText = `$${totalPlata}`;
+            document.getElementById('totalCortesHoy').innerText = totalCortes;
+            lucide.createIcons();
+        }
+
+        function renderizarHistorial(historialData) {
+            const contenedor = document.getElementById('listaHistorial');
+            const contenedorDesglose = document.getElementById('desglosesBarberos');
+            if(!contenedor || !contenedorDesglose) return;
+            
+            contenedor.innerHTML = '';
+            contenedorDesglose.innerHTML = '';
+            
+            const registros = Object.values(historialData);
+            const ahora = new Date();
+
+            const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).getTime();
+            const diaSemana = ahora.getDay(); 
+            const diferenciaLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
+            const inicioSemana = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + diferenciaLunes).getTime();
+            const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).getTime();
+
+            let totalHoyFacturado = 0;
+            let totalSemanal = 0;
+            let totalMensual = 0;
+            let statsBarberos = {};
+
+            registros.forEach(r => {
+                const monto = r.recaudado || 0;
+                const cortes = r.cortes || 0;
+                const rTimestamp = r.timestamp || Date.now();
+                const nombreB = r.barbero || "Desconocido";
+
+                if (!statsBarberos[nombreB]) {
+                    statsBarberos[nombreB] = { cortesSemana: 0, plataSemana: 0, cortesMes: 0, plataMes: 0 };
+                }
+
+                if (rTimestamp >= inicioHoy) totalHoyFacturado += monto;
+                if (rTimestamp >= inicioSemana) {
+                    totalSemanal += monto;
+                    statsBarberos[nombreB].cortesSemana += cortes;
+                    statsBarberos[nombreB].plataSemana += monto;
+                }
+                if (rTimestamp >= inicioMes) {
+                    totalMensual += monto;
+                    statsBarberos[nombreB].cortesMes += cortes;
+                    statsBarberos[nombreB].plataMes += monto;
+                }
+            });
+
+            document.getElementById('totalFacturadoHoy').innerText = `$${totalHoyFacturado}`;
+            document.getElementById('ingresoSemanal').innerText = `$${totalSemanal}`;
+            document.getElementById('ingresoMensual').innerText = `$${totalMensual}`;
+
+            const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            document.getElementById('labelMes').innerText = `Todo ${nombresMeses[ahora.getMonth()]}`;
+            document.getElementById('labelSemana').innerText = "Semana Lunes a Dom";
+
+            const listaNombres = Object.keys(statsBarberos);
+            if(listaNombres.length === 0) {
+                contenedorDesglose.innerHTML = `<p class="text-xs text-stone-500 py-1">Sin cierres acumulados aún.</p>`;
+            } else {
+                listaNombres.forEach(nombre => {
+                    const sb = statsBarberos[nombre];
+                    const fila = document.createElement('div');
+                    fila.className = "bg-stone-950 p-3.5 rounded-xl border border-stone-800 shadow-sm space-y-2";
+                    fila.innerHTML = `
+                        <div class="flex justify-between items-center border-b border-stone-900 pb-1.5">
+                            <h4 class="font-bold text-amber-500 text-sm flex items-center gap-1.5">
+                                <i data-lucide="user" class="w-3.5 h-3.5 text-stone-400"></i> ${nombre}
+                            </h4>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <div class="bg-stone-900/50 p-2 rounded-lg">
+                                <p class="text-[10px] text-stone-500 font-bold uppercase tracking-wider">En la Semana</p>
+                                <p class="font-bold text-green-400 mt-0.5">$${sb.plataSemana} <span class="text-stone-400 font-normal text-[10px]">(${sb.cortesSemana} crt)</span></p>
+                            </div>
+                            <div class="bg-stone-900/50 p-2 rounded-lg">
+                                <p class="text-[10px] text-stone-500 font-bold uppercase tracking-wider">En el Mes</p>
+                                <p class="font-bold text-amber-500 mt-0.5">$${sb.plataMes} <span class="text-stone-400 font-normal text-[10px]">(${sb.cortesMes} crt)</span></p>
+                            </div>
+                        </div>
+                    `;
+                    contenedorDesglose.appendChild(fila);
+                });
+            }
+
+            const registrosOrdenados = [...registros].reverse();
+            if (registrosOrdenados.length === 0) {
+                contenedor.innerHTML = `<p class="text-center text-xs text-stone-500 py-4">No hay cierres registrados todavía.</p>`;
+                return;
+            }
+
+            registrosOrdenados.forEach(r => {
+                const card = document.createElement('div');
+                card.className = "bg-stone-950/60 border border-stone-800/80 p-3.5 rounded-xl flex justify-between items-center text-sm";
+                card.innerHTML = `
+                    <div>
+                        <span class="text-[10px] bg-stone-800 text-stone-400 px-2 py-0.5 rounded-full font-mono font-bold">${r.fecha}</span>
+                        <h4 class="font-semibold text-stone-200 mt-1.5"><span class="text-amber-500">${r.barbero}</span> cerró jornada</h4>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-black text-green-400 text-base">$${r.recaudado}</p>
+                        <p class="text-[10px] text-stone-400">${r.cortes} cortes metidos</p>
+                    </div>
+                `;
+                contenedor.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        document.getElementById('formNuevoAlumno').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const nombre = document.getElementById('alumnoNombre').value.trim();
+            const curso = document.getElementById('alumnoCurso').value;
+
+            db.ref('alumnos').push().set({
+                nombre: nombre,
+                curso: curso,
+                estado: "cursando",
+                fechaIngreso: new Date().toLocaleDateString('es-AR')
+            });
+            document.getElementById('formNuevoAlumno').reset();
+        });
+
+        function renderizarAlumnos(alumnosData) {
+            const contenedorCursando = document.getElementById('listaAlumnosCursando');
+            const contenedorEgresados = document.getElementById('listaAlumnosEgresados');
+            if(!contenedorCursando || !contenedorEgresados) return;
+
+            contenedorCursando.innerHTML = '';
+            contenedorEgresados.innerHTML = '';
+
+            let hayCursando = false;
+            let hayEgresados = false;
+
+            for (let id in alumnosData) {
+                const al = alumnosData[id];
+                const card = document.createElement('div');
+                card.className = "bg-stone-950 border border-stone-800 p-3.5 rounded-xl flex justify-between items-center shadow-sm";
+
+                if (al.estado === 'cursando') {
+                    hayCursando = true;
+                    card.innerHTML = `
+                        <div>
+                            <h4 class="font-bold text-stone-200 text-sm">${al.nombre}</h4>
+                            <p class="text-[11px] text-amber-500 mt-0.5 font-medium">${al.curso}</p>
+                            <span class="text-[9px] text-stone-500 block mt-1">Ingreso: ${al.fechaIngreso}</span>
+                        </div>
+                        <div class="flex gap-1.5">
+                            <button onclick="egresarAlumno('${id}')" class="bg-green-600/20 hover:bg-green-600 border border-green-500/30 text-green-400 hover:text-stone-950 px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1 min-h-[40px]">
+                                <i data-lucide="check" class="w-3.5 h-3.5"></i> Egresar
+                            </button>
+                            <button onclick="eliminarAlumno('${id}')" class="p-2.5 bg-stone-900 hover:bg-red-950 text-stone-600 hover:text-red-400 border border-stone-800 rounded-lg transition min-h-[40px]">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    `;
+                    contenedorCursando.appendChild(card);
+                } else {
+                    hayEgresados = true;
+                    card.innerHTML = `
+                        <div>
+                            <h4 class="font-bold text-stone-300 text-sm">${al.nombre}</h4>
+                            <p class="text-[11px] text-stone-500 mt-0.5">${al.curso}</p>
+                            <span class="text-[9px] text-green-400 font-medium block mt-1">Finalizado: ${al.fechaEgreso || al.fechaIngreso}</span>
+                        </div>
+                        <div class="flex gap-1.5">
+                            <button onclick="descargarDiplomaPDF('${al.nombre}', '${al.curso}', '${al.fechaEgreso || al.fechaIngreso}')" class="bg-amber-500 hover:bg-amber-400 text-stone-950 px-3 py-2 rounded-lg text-xs font-black transition flex items-center gap-1 shadow-md min-h-[40px]">
+                                <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Ver PDF
+                            </button>
+                            <button onclick="eliminarAlumno('${id}')" class="p-2.5 bg-stone-900 hover:bg-red-950 text-stone-600 hover:text-red-400 border border-stone-800 rounded-lg transition min-h-[40px]">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    `;
+                    contenedorEgresados.appendChild(card);
+                }
+            }
+
+            if(!hayCursando) contenedorCursando.innerHTML = `<p class="text-xs text-stone-500 italic px-1">No hay alumnos cursando actualmente.</p>`;
+            if(!hayEgresados) contenedorEgresados.innerHTML = `<p class="text-xs text-stone-500 italic px-1">No se registran alumnos recibidos.</p>`;
+            lucide.createIcons();
+        }
+
+        function egresarAlumno(id) {
+            if (confirm("¿Confirmás que el alumno finalizó satisfactoriamente el curso teórico-práctico?")) {
+                db.ref(`alumnos/${id}`).update({
+                    estado: "egresado",
+                    fechaEgreso: new Date().toLocaleDateString('es-AR')
+                });
+            }
+        }
+
+        function eliminarAlumno(id) {
+            if (confirm("¿Borrar permanentemente este registro del alumno?")) db.ref(`alumnos/${id}`).remove();
+        }
+
+        // ==================== GENERADOR DIPLOMA 100% COMPATIBLE CON MÓVILES (ANDROID/IOS) ====================
+        function descargarDiplomaPDF(nombreAlumno, nombreCurso, fechaEgreso) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
+            
+            // Fondo Gris Oscuro Premium Barbería
+            doc.setFillColor(24, 22, 20); 
+            doc.rect(0, 0, 297, 210, 'F');
+
+            // Marco doble dorado decorativo perimetral
+            doc.setStrokeColor(217, 119, 6); 
+            doc.setLineWidth(1.5);
+            doc.rect(10, 10, 277, 190);
+            doc.setLineWidth(0.4);
+            doc.rect(12, 12, 273, 186);
+
+            // Detalles decorativos en las esquinas
+            doc.setLineWidth(0.8);
+            doc.line(15, 20, 25, 20); doc.line(20, 15, 20, 25);
+            doc.line(272, 20, 282, 20); doc.line(277, 15, 277, 25);
+
+            // TEXTOS DEL DIPLOMA
+            doc.setTextColor(245, 158, 11); 
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(36);
+            doc.text("VATOS BARBER STUDIO", 148, 45, { align: 'center' });
+
+            doc.setTextColor(168, 162, 158); 
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(12);
+            doc.text("CERTIFICADO DE EXCELENCIA PROFESIONAL", 148, 56, { align: 'center', charSpace: 2 });
+
+            doc.setTextColor(214, 211, 209); 
+            doc.setFontSize(14);
+            doc.text("Por cuanto se reconoce que completó con éxito las exigencias de la academia:", 148, 85, { align: 'center' });
+
+            doc.setTextColor(255, 255, 255); 
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(28);
+            doc.text(nombreAlumno.toUpperCase(), 148, 105, { align: 'center' });
+
+            doc.setStrokeColor(120, 113, 108); 
+            doc.setLineWidth(0.5);
+            doc.line(78, 112, 218, 112);
+
+            doc.setTextColor(214, 211, 209);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(14);
+            doc.text("Otorgándole el título de idoneidad técnico-profesional en:", 148, 126, { align: 'center' });
+
+            doc.setTextColor(245, 158, 11); 
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(18);
+            doc.text(nombreCurso, 148, 140, { align: 'center' });
+
+            doc.setTextColor(120, 113, 108); 
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(11);
+            doc.text(`Dado en Florencio Varela, Buenos Aires, el ${fechaEgreso}.`, 148, 162, { align: 'center' });
+
+            // Firmas
+            doc.setStrokeColor(245, 158, 11); 
+            doc.setLineWidth(0.5);
+            doc.line(45, 185, 115, 185);
+            doc.setTextColor(214, 211, 209);
+            doc.setFontSize(11);
+            doc.text("Matías (Maty) Paz", 80, 191, { align: 'center' });
+            doc.setFontSize(9);
+            doc.text("Director Ejecutivo & Master Barber", 80, 196, { align: 'center' });
+
+            doc.line(182, 185, 252, 185);
+            doc.setTextColor(214, 211, 209);
+            doc.setFontSize(11);
+            doc.text("Sello de la Academia", 217, 191, { align: 'center' });
+            doc.setFontSize(9);
+            doc.text("Vatos Barber Control System", 217, 196, { align: 'center' });
+
+            // SOLUCIÓN TOTAL MÓVIL: Genera un Blob de datos crudo y lo abre directamente en ventana limpia
+            try {
+                const blob = doc.output('blob');
+                const url = URL.createObjectURL(blob);
+                
+                // Intentamos abrirlo en una ventana nueva nativa del sistema móvil
+                const win = window.open(url, '_blank');
+                if (!win || win.closed) {
+                    // Si el visor interno (ej: WhatsApp) bloquea la ventana, redirige la pestaña actual
+                    window.location.href = url;
+                }
+            } catch (error) {
+                // Caída de seguridad por si las moscas
+                doc.save(`Diploma_${nombreAlumno.replace(/ /g, '_')}.pdf`);
+            }
+        }
+
+        document.getElementById('formNuevoBarbero').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const userCheck = document.getElementById('nuevoUsuario').value.trim().toLowerCase();
+
+            for (let id in todosLosUsuarios) {
+                if (todosLosUsuarios[id].usuario.toLowerCase() === userCheck) return alert("Usuario duplicado.");
+            }
+
+            db.ref('barberos').push().set({
+                nombre: document.getElementById('nuevoNombre').value.trim(),
+                usuario: document.getElementById('nuevoUsuario').value.trim(),
+                password: document.getElementById('nuevoPassword').value,
+                cortesHoy: 0
+            });
+            document.getElementById('formNuevoBarbero').reset();
+        });
+
+        window.eliminarBarberoFirebase = function(id, nombre) {
+            if (confirm(`¿Borrar a ${nombre}?`)) db.ref(`barberos/${id}`).remove();
+        }
+
+        function cerrarSesion() {
+            usuarioLogueadoId = null;
+            vistaBarbero.classList.add('hidden');
+            vistaAdmin.classList.add('hidden');
+            vistaLogin.classList.remove('hidden');
+            formLogin.reset();
+        }
+    </script>
+</body>
+</html>
