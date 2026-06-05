@@ -9,8 +9,6 @@
 
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body class="bg-stone-900 text-stone-100 font-sans min-h-screen flex flex-col justify-between select-none">
 
@@ -325,7 +323,6 @@
         }
 
         function sumarCorteMaty() { db.ref('cortesMaty').set(cortesMaty + 1); }
-        function avanzarCorteMaty() { db.ref('cortesMaty').set(cortesMaty + 1); }
         function restarCorteMaty() { if(cortesMaty > 0) db.ref('cortesMaty').set(cortesMaty - 1); }
         
         function finalizarJornadaMaty() {
@@ -491,7 +488,7 @@
             const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).getTime();
             const diaSemana = ahora.getDay(); 
             const diferenciaLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
-            const inicioSemana = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + diferenciaLunes).getTime();
+            const inicioSemana = new Date(ahora.getFullYear(), ., ahora.getDate() + diferenciaLunes).getTime();
             const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).getTime();
 
             let totalHoyFacturado = 0;
@@ -641,7 +638,7 @@
                         </div>
                         <div class="flex gap-1.5">
                             <button onclick="descargarDiplomaPDF('${al.nombre}', '${al.curso}', '${al.fechaEgreso || al.fechaIngreso}')" class="bg-amber-500 hover:bg-amber-400 text-stone-950 px-3 py-2 rounded-lg text-xs font-black transition flex items-center gap-1 shadow-md min-h-[40px]">
-                                <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Ver PDF
+                                <i data-lucide="image" class="w-3.5 h-3.5"></i> Ver Diploma
                             </button>
                             <button onclick="eliminarAlumno('${id}')" class="p-2.5 bg-stone-900 hover:bg-red-950 text-stone-600 hover:text-red-400 border border-stone-800 rounded-lg transition min-h-[40px]">
                                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -670,97 +667,109 @@
             if (confirm("¿Borrar permanentemente este registro del alumno?")) db.ref(`alumnos/${id}`).remove();
         }
 
-        // ==================== GENERADOR DIPLOMA 100% COMPATIBLE CON MÓVILES (ANDROID/IOS) ====================
+        // ==================== GENERADOR DE DIPLOMA EN IMAGEN ALTA RESOLUCIÓN ====================
         function descargarDiplomaPDF(nombreAlumno, nombreCurso, fechaEgreso) {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
             
-            // Fondo Gris Oscuro Premium Barbería
-            doc.setFillColor(24, 22, 20); 
-            doc.rect(0, 0, 297, 210, 'F');
+            canvas.width = 1920;
+            canvas.height = 1357;
 
-            // Marco doble dorado decorativo perimetral
-            doc.setStrokeColor(217, 119, 6); 
-            doc.setLineWidth(1.5);
-            doc.rect(10, 10, 277, 190);
-            doc.setLineWidth(0.4);
-            doc.rect(12, 12, 273, 186);
+            ctx.fillStyle = '#181614';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Detalles decorativos en las esquinas
-            doc.setLineWidth(0.8);
-            doc.line(15, 20, 25, 20); doc.line(20, 15, 20, 25);
-            doc.line(272, 20, 282, 20); doc.line(277, 15, 277, 25);
+            ctx.strokeStyle = '#D97706'; 
+            ctx.lineWidth = 10;
+            ctx.strokeRect(60, 60, canvas.width - 120, canvas.height - 120);
+            ctx.lineWidth = 3;
+            ctx.strokeRect(75, 75, canvas.width - 150, canvas.height - 150);
 
-            // TEXTOS DEL DIPLOMA
-            doc.setTextColor(245, 158, 11); 
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(36);
-            doc.text("VATOS BARBER STUDIO", 148, 45, { align: 'center' });
+            ctx.lineWidth = 5;
+            ctx.beginPath(); ctx.moveTo(90, 120); ctx.lineTo(150, 120); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(120, 90); ctx.lineTo(120, 150); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(canvas.width - 150, 120); ctx.lineTo(canvas.width - 90, 120); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(canvas.width - 120, 90); ctx.lineTo(canvas.width - 120, 150); ctx.stroke();
 
-            doc.setTextColor(168, 162, 158); 
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(12);
-            doc.text("CERTIFICADO DE EXCELENCIA PROFESIONAL", 148, 56, { align: 'center', charSpace: 2 });
+            ctx.textAlign = 'center';
 
-            doc.setTextColor(214, 211, 209); 
-            doc.setFontSize(14);
-            doc.text("Por cuanto se reconoce que completó con éxito las exigencias de la academia:", 148, 85, { align: 'center' });
+            ctx.fillStyle = '#F59E0B';
+            ctx.font = 'bold 70px Helvetica';
+            ctx.fillText("VATOS BARBER STUDIO", canvas.width / 2, 280);
 
-            doc.setTextColor(255, 255, 255); 
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(28);
-            doc.text(nombreAlumno.toUpperCase(), 148, 105, { align: 'center' });
+            ctx.fillStyle = '#A8A29E';
+            ctx.font = 'bold 24px Helvetica';
+            ctx.fillText("CERTIFICADO DE EXCELENCIA PROFESIONAL", canvas.width / 2, 350);
 
-            doc.setStrokeColor(120, 113, 108); 
-            doc.setLineWidth(0.5);
-            doc.line(78, 112, 218, 112);
+            ctx.fillStyle = '#D6D3D1';
+            ctx.font = '32px Helvetica';
+            ctx.fillText("Por cuanto se reconoce que completó con éxito las exigencias de la academia:", canvas.width / 2, 550);
 
-            doc.setTextColor(214, 211, 209);
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(14);
-            doc.text("Otorgándole el título de idoneidad técnico-profesional en:", 148, 126, { align: 'center' });
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 65px Helvetica';
+            ctx.fillText(nombreAlumno.toUpperCase(), canvas.width / 2, 680);
 
-            doc.setTextColor(245, 158, 11); 
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(18);
-            doc.text(nombreCurso, 148, 140, { align: 'center' });
+            ctx.strokeStyle = '#78716C';
+            ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(canvas.width / 2 - 350, 720); ctx.lineTo(canvas.width / 2 + 350, 720); ctx.stroke();
 
-            doc.setTextColor(120, 113, 108); 
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(11);
-            doc.text(`Dado en Florencio Varela, Buenos Aires, el ${fechaEgreso}.`, 148, 162, { align: 'center' });
+            ctx.fillStyle = '#D6D3D1';
+            ctx.font = '32px Helvetica';
+            ctx.fillText("Otorgándole el título de idoneidad técnico-profesional en:", canvas.width / 2, 820);
 
-            // Firmas
-            doc.setStrokeColor(245, 158, 11); 
-            doc.setLineWidth(0.5);
-            doc.line(45, 185, 115, 185);
-            doc.setTextColor(214, 211, 209);
-            doc.setFontSize(11);
-            doc.text("Matías (Maty) Paz", 80, 191, { align: 'center' });
-            doc.setFontSize(9);
-            doc.text("Director Ejecutivo & Master Barber", 80, 196, { align: 'center' });
+            ctx.fillStyle = '#F59E0B';
+            ctx.font = 'bold 45px Helvetica';
+            ctx.fillText(nombreCurso, canvas.width / 2, 910);
 
-            doc.line(182, 185, 252, 185);
-            doc.setTextColor(214, 211, 209);
-            doc.setFontSize(11);
-            doc.text("Sello de la Academia", 217, 191, { align: 'center' });
-            doc.setFontSize(9);
-            doc.text("Vatos Barber Control System", 217, 196, { align: 'center' });
+            ctx.fillStyle = '#78716C';
+            ctx.font = '26px Helvetica';
+            ctx.fillText(`Dado en Florencio Varela, Buenos Aires, el ${fechaEgreso}.`, canvas.width / 2, 1040);
 
-            // SOLUCIÓN TOTAL MÓVIL: Genera un Blob de datos crudo y lo abre directamente en ventana limpia
+            ctx.strokeStyle = '#F59E0B';
+            ctx.lineWidth = 3;
+
+            ctx.beginPath(); ctx.moveTo(250, 1180); ctx.lineTo(650, 1180); ctx.stroke();
+            ctx.fillStyle = '#D6D3D1';
+            ctx.font = '26px Helvetica';
+            ctx.fillText("Matías (Maty) Paz", 450, 1220);
+            ctx.fillStyle = '#78716C';
+            ctx.font = '20px Helvetica';
+            ctx.fillText("Director Ejecutivo & Master Barber", 450, 1255);
+
+            ctx.beginPath(); ctx.moveTo(canvas.width - 650, 1180); ctx.lineTo(canvas.width - 250, 1180); ctx.stroke();
+            ctx.fillStyle = '#D6D3D1';
+            ctx.font = '26px Helvetica';
+            ctx.fillText("Sello de la Academia", canvas.width - 450, 1220);
+            ctx.fillStyle = '#78716C';
+            ctx.font = '20px Helvetica';
+            ctx.fillText("Vatos Barber Control System", canvas.width - 450, 1255);
+
             try {
-                const blob = doc.output('blob');
-                const url = URL.createObjectURL(blob);
-                
-                // Intentamos abrirlo en una ventana nueva nativa del sistema móvil
-                const win = window.open(url, '_blank');
-                if (!win || win.closed) {
-                    // Si el visor interno (ej: WhatsApp) bloquea la ventana, redirige la pestaña actual
-                    window.location.href = url;
+                const urlImagen = canvas.toDataURL('image/png');
+                const ventanaImagen = window.open();
+                if (ventanaImagen) {
+                    ventanaImagen.document.write(`
+                        <html lang="es">
+                        <head>
+                            <title>Diploma - ${nombreAlumno}</title>
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <style>
+                                body { margin: 0; background: #111; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; color: #fff; font-family: sans-serif; }
+                                img { max-width: 100%; height: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+                                p { margin-top: 15px; font-size: 14px; color: #a8a29e; text-align: center; padding: 0 20px; }
+                            </style>
+                        </head>
+                        <body>
+                            <img src="${urlImagen}" alt="Diploma">
+                            <p>📱 <b>Mantené apretada la imagen</b> para guardarla en tus fotos o compartirla por WhatsApp.</p>
+                        </body>
+                        </html>
+                    `);
+                    ventanaImagen.document.close();
+                } else {
+                    window.location.href = urlImagen;
                 }
             } catch (error) {
-                // Caída de seguridad por si las moscas
-                doc.save(`Diploma_${nombreAlumno.replace(/ /g, '_')}.pdf`);
+                alert("Error al generar la imagen del diploma.");
             }
         }
 
